@@ -7,12 +7,27 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+
+    - name: Set TAG variable
+      run: echo "TAG=latest" >> $GITHUB_ENV
+
+    - name: Build Docker image
+      run: docker build . --file ./docker/Dockerfile --tag custom-python-image:${TAG}
+
+    - name: Run container in background
+      run: docker run -d -p 8080:8080 --name python-app custom-python-image:${TAG}
+
+    - name: Wait for server to start
+      run: sleep 3
+
+    - name: Test the endpoint
+      run: curl -f http://localhost:8080 || exit 1
+
+    - name: Stop container
+      if: always()
+      run: docker stop python-app || true
